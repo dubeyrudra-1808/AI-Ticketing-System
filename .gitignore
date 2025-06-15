@@ -1,0 +1,52 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environment
+venv/
+.env/
+*.env
+
+# Environment config
+.env.local
+.env.*.local
+
+# VSCode settings
+.vscode/
+
+# Jupyter
+.ipynb_checkpoints
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# MyPy / Pyright / Coverage / pytest
+.mypy_cache/
+.pyright/
+.coverage
+htmlcov/
+.cache/
+pytest_cache/
+
+# Uvicorn reload files
+*.pid
+
+# Pydantic compiled schema cache (optional)
+__pydantic_cache__/
+
+# Streamlit config
+.streamlit/
+
+# Node or frontend tools (if ever added)
+node_modules/
+build/
+dist/
+*.tgz
+
+# Compiled JS/CSS (in case you ever use Tailwind or similar)
+*.map
