@@ -4,11 +4,12 @@ from typing import List
 from app.models.user import UserUpdate, UserResponse
 from app.services.auth_service import auth_service
 from app.routes.auth import get_current_user
+from app.services.ai_rerun_service import run_ai_analysis_and_notify  
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
-def require_admin(current_user = Depends(get_current_user)):
-    """Dependency to require admin role"""
+# Admin role check
+def require_admin(current_user=Depends(get_current_user)):
     if current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -16,11 +17,11 @@ def require_admin(current_user = Depends(get_current_user)):
         )
     return current_user
 
+
+# ✅ Get all users (admin only)
 @router.get("/users", response_model=List[UserResponse])
-async def get_all_users(admin_user = Depends(require_admin)):
-    """Get all users (admin only)"""
+async def get_all_users(admin_user=Depends(require_admin)):
     users = await auth_service.get_all_users()
-    
     return [
         UserResponse(
             id=str(user.id),
@@ -35,15 +36,16 @@ async def get_all_users(admin_user = Depends(require_admin)):
         for user in users
     ]
 
+
+# ✅ Update user role or skills (admin only)
 @router.patch("/users/{user_id}", response_model=UserResponse)
 async def update_user(
     user_id: str,
     user_update: UserUpdate,
-    admin_user = Depends(require_admin)
+    admin_user=Depends(require_admin)
 ):
-    """Update user role and skills (admin only)"""
     updated_user = await auth_service.update_user_role_and_skills(
-        user_id,  # Correct usage of user_id from path
+        user_id,
         user_update.role,
         user_update.skills
     )
@@ -64,4 +66,26 @@ async def update_user(
         is_active=updated_user.is_active,
         created_at=updated_user.created_at
     )
+
+
+# ✅ Admin-triggered rerun of AI + email
+@router.post("/rerun-ai", status_code=200)
+async def trigger_rerun_ai(admin_user=Depends(require_admin)):
+    """
+    Admin-triggered AI re-analysis of failed tickets only.
+
+    ✅ Filters only tickets where:
+        - ai_notes == "AI analysis unavailable. Please review manually."
+        - status != "resolved"
+
+    Re-runs Gemini analysis and notifies moderators via email.
+    """
+    try:
+        await run_ai_analysis_and_notify()
+        return {"message": "✅ AI re-analysis of fallback tickets triggered successfully."}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"❌ Failed to rerun AI analysis: {str(e)}"
+        )
 
