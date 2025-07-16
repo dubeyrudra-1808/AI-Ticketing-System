@@ -17,18 +17,38 @@ This is the backend service for the AI Ticketing System. It handles user authent
 ## 📁 Project Structure
 
 ```
-app/
-├── config.py            # Loads environment variables
-├── db.py                # MongoDB client setup
-├── main.py              # FastAPI entry point
-├── models/              # Pydantic & DB models
-├── routes/              # API endpoints (auth, ticket, admin)
-├── services/            # Core logic (auth, ai, email)
-│   ├── ai_service.py
-│   ├── email_service.py
-│   └── auth_service.py
-├── utils/               # Utility helpers
-└── ai_rerun_service.py  # Script for AI re-analysis and notifications
+AI-Ticketing-System/
+├── .gitignore
+├── README.md
+├── requirements.txt
+├── app/
+│   ├── __init__.py
+│   ├── config.py
+│   ├── main.py
+│
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── database.py         # Database config or session maker
+│   │   ├── ticket.py           # Ticket model/schema
+│   │   └── user.py             # User model/schema
+│
+│   ├── routes/
+│   │   ├── __init__.py
+│   │   ├── admin.py            # Admin-specific endpoints
+│   │   ├── auth.py             # Authentication routes (OTP login)
+│   │   └── tickets.py          # Ticket-related endpoints (CRUD, assign, filter)
+│
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── ai_service.py       # Logic to query Gemini API for triaging
+│   │   ├── auth_service.py     # Handles OTP logic and user verification
+│   │   ├── email_service.py    # Sends styled HTML emails to moderators
+│   │   └── ticket_service.py   # Business logic for ticket creation/assignment
+│
+│   └── utils/
+│       ├── __init__.py
+│       ├── background_tasks.py # Async background runners (email, re-analysis)
+│       └── security.py         # Password hashing, JWT handling
 ```
 
 ---
