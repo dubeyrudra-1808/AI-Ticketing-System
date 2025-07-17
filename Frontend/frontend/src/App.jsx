@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
-import { Shield, LayoutDashboard, Ticket, LogOut, User, Lock, Mail, ChevronRight, Menu, X, PlusCircle, BarChart2, Users, Edit, Save, AlertCircle } from 'lucide-react';
+import { Shield, LayoutDashboard, Ticket, LogOut, User, Lock, Mail, ChevronRight, Menu, X, PlusCircle, BarChart2, Users, Edit, Save, AlertCircle, Info } from 'lucide-react';
 
 // --- Configuration ---
-const API_BASE_URL = 'http://localhost:8000';
+// In a real app, this would come from an environment variable
+const API_BASE_URL = 'http://localhost:8000'; 
 
 // --- API Service ---
 // A helper class to manage API requests, including adding the auth token.
@@ -42,7 +43,7 @@ class ApiService {
                 throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
             }
             if (response.status === 204 || response.headers.get('content-length') === '0') {
-              return null;
+                return null;
             }
             return await response.json();
         } catch (error) {
@@ -109,13 +110,60 @@ class ApiService {
             method: 'POST',
         });
     }
-
 }
 
 const api = new ApiService();
 
+// --- Notification Context ---
+const NotificationContext = createContext();
+
+const NotificationProvider = ({ children }) => {
+    const [notifications, setNotifications] = useState([]);
+
+    const addNotification = (message, type = 'info') => {
+        const id = Date.now();
+        setNotifications(prev => [...prev, { id, message, type }]);
+        setTimeout(() => {
+            setNotifications(prev => prev.filter(n => n.id !== id));
+        }, 5000);
+    };
+
+    return (
+        <NotificationContext.Provider value={{ addNotification }}>
+            {children}
+            <NotificationContainer notifications={notifications} />
+        </NotificationContext.Provider>
+    );
+};
+
+const useNotification = () => useContext(NotificationContext);
+
+const NotificationContainer = ({ notifications }) => (
+    <div className="fixed bottom-4 right-4 z-[100] space-y-2">
+        {notifications.map(n => (
+            <Notification key={n.id} message={n.message} type={n.type} />
+        ))}
+    </div>
+);
+
+const Notification = ({ message, type }) => {
+    const baseStyle = "flex items-center gap-3 p-4 rounded-lg shadow-lg animate-fade-in-up";
+    const typeStyles = {
+        info: "bg-blue-500 text-white",
+        success: "bg-green-500 text-white",
+        error: "bg-red-500 text-white",
+    };
+
+    return (
+        <div className={`${baseStyle} ${typeStyles[type]}`}>
+            <Info size={20} />
+            <span>{message}</span>
+        </div>
+    );
+};
+
+
 // --- Auth Context ---
-// Manages user state and authentication throughout the app.
 const AuthContext = createContext(null);
 
 const AuthProvider = ({ children }) => {
@@ -129,7 +177,6 @@ const AuthProvider = ({ children }) => {
             api.request('/api/auth/me')
                 .then(userData => setUser(userData))
                 .catch(() => {
-                    // Token is invalid, clear it
                     localStorage.removeItem('authToken');
                     api.setToken(null);
                     setUser(null);
@@ -175,14 +222,15 @@ const useAuth = () => useContext(AuthContext);
 // --- Main App Component ---
 export default function App() {
     return (
-        <AuthProvider>
-            <Router />
-        </AuthProvider>
+        <NotificationProvider>
+            <AuthProvider>
+                <Router />
+            </AuthProvider>
+        </NotificationProvider>
     );
 }
 
 // --- Router Component ---
-// Handles navigation between different pages.
 const Router = () => {
     const { user, isAuthLoading } = useAuth();
     const [page, setPage] = useState('dashboard');
@@ -198,14 +246,12 @@ const Router = () => {
     }
 
     if (!user) {
-        // Show login/signup pages if not authenticated
         if (page === 'signup') {
             return <SignupPage navigate={navigate} />;
         }
         return <LoginPage navigate={navigate} />;
     }
 
-    // Main application layout for authenticated users
     return <MainLayout navigate={navigate} page={page} params={params} />;
 };
 
@@ -327,8 +373,8 @@ const StatCard = ({ title, value, icon, color }) => (
 const Modal = ({ isOpen, onClose, title, children }) => {
     if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg m-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
                 <div className="p-4 border-b flex justify-between items-center">
                     <h3 className="text-lg font-semibold">{title}</h3>
                     <button onClick={onClose} className="text-gray-500 hover:text-gray-800"><X size={24} /></button>
@@ -341,6 +387,21 @@ const Modal = ({ isOpen, onClose, title, children }) => {
     );
 };
 
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, children }) => {
+    if (!isOpen) return null;
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={title}>
+            <div className="space-y-4">
+                <div>{children}</div>
+                <div className="flex justify-end gap-4">
+                    <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
+                    <button type="button" onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Confirm</button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
 const getStatusChip = (status) => {
     const styles = {
         open: 'bg-blue-100 text-blue-800',
@@ -348,7 +409,7 @@ const getStatusChip = (status) => {
         resolved: 'bg-green-100 text-green-800',
         closed: 'bg-gray-100 text-gray-800',
     };
-    return <span className={`px-2 py-1 text-xs font-medium rounded-full ${styles[status] || styles.closed}`}>{status?.replace('_', ' ')}</span>;
+    return <span className={`px-2 py-1 text-xs font-medium rounded-full capitalize ${styles[status] || styles.closed}`}>{status?.replace('_', ' ')}</span>;
 };
 
 const getPriorityChip = (priority) => {
@@ -358,7 +419,7 @@ const getPriorityChip = (priority) => {
         high: 'bg-orange-100 text-orange-800',
         urgent: 'bg-red-100 text-red-800',
     };
-    return <span className={`px-2 py-1 text-xs font-semibold rounded-full ${styles[priority] || styles.low}`}>{priority}</span>;
+    return <span className={`px-2 py-1 text-xs font-semibold rounded-full capitalize ${styles[priority] || styles.low}`}>{priority}</span>;
 };
 
 const getRoleChip = (role) => {
@@ -367,7 +428,7 @@ const getRoleChip = (role) => {
         moderator: 'bg-purple-100 text-purple-800',
         admin: 'bg-green-100 text-green-800',
     };
-    return <span className={`px-2 py-1 text-xs font-semibold rounded-full ${styles[role] || styles.user}`}>{role}</span>;
+    return <span className={`px-2 py-1 text-xs font-semibold rounded-full capitalize ${styles[role] || styles.user}`}>{role}</span>;
 };
 
 // --- Page Components ---
@@ -400,7 +461,6 @@ const LoginPage = ({ navigate }) => {
                     <p className="mt-2 text-sm text-gray-600">to your AI Ticketing System account</p>
                 </div>
                 <form className="space-y-6" onSubmit={handleSubmit}>
-                    {/* Form fields... */}
                     <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20}/>
                         <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition" />
@@ -457,7 +517,6 @@ const SignupPage = ({ navigate }) => {
                     <p className="mt-2 text-sm text-gray-600">Get started with the AI Ticketing System</p>
                 </div>
                 <form className="space-y-4" onSubmit={handleSubmit}>
-                    {/* Form fields... */}
                     <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20}/>
                         <input type="text" placeholder="Full Name" value={fullName} onChange={(e) => setFullName(e.target.value)} required className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition" />
@@ -474,7 +533,6 @@ const SignupPage = ({ navigate }) => {
                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20}/>
                         <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition" />
                     </div>
-
                     {error && <p className="text-sm text-red-600 text-center">{error}</p>}
                     <div>
                         <button type="submit" disabled={isLoading} className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition disabled:bg-indigo-400">
@@ -515,17 +573,20 @@ const DashboardPage = ({ navigate }) => {
             {user.role === 'admin' && (
                 isLoading ? <div>Loading stats...</div> :
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                    <StatCard title="Total Tickets" value={stats?.total || 0} icon={<Ticket size={24} />} color="bg-blue-100 text-blue-600" />
-                    <StatCard title="Open Tickets" value={stats?.open || 0} icon={<AlertCircle size={24} />} color="bg-yellow-100 text-yellow-600" />
-                    <StatCard title="Resolved Tickets" value={stats?.resolved || 0} icon={<Shield size={24} />} color="bg-green-100 text-green-600" />
-                    <StatCard title="Urgent Priority" value={stats?.urgent || 0} icon={<AlertCircle size={24} />} color="bg-red-100 text-red-600" />
+                    <StatCard title="Total Tickets" value={stats?.total || 0} icon={<Ticket size={24} className="text-blue-600"/>} color="bg-blue-100" />
+                    <StatCard title="Open Tickets" value={stats?.open || 0} icon={<AlertCircle size={24} className="text-yellow-600"/>} color="bg-yellow-100" />
+                    <StatCard title="Resolved Tickets" value={stats?.resolved || 0} icon={<Shield size={24} className="text-green-600"/>} color="bg-green-100" />
+                    <StatCard title="Urgent Priority" value={stats?.urgent || 0} icon={<AlertCircle size={24} className="text-red-600"/>} color="bg-red-100" />
                 </div>
             )}
             <div className="text-center">
                 <p className="text-gray-600 mb-4">What would you like to do today?</p>
                 <div className="flex justify-center gap-4">
                     <button onClick={() => navigate('tickets')} className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow hover:bg-indigo-700 transition">View My Tickets</button>
-                    <button onClick={() => navigate('tickets', { showCreateModal: true })} className="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg shadow hover:bg-green-700 transition">Create New Ticket</button>
+                    {/* --- MODIFICATION: Only show 'Create Ticket' to users with the 'user' role --- */}
+                    {user.role === 'user' && (
+                        <button onClick={() => navigate('tickets', { showCreateModal: true })} className="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg shadow hover:bg-green-700 transition">Create New Ticket</button>
+                    )}
                 </div>
             </div>
         </div>
@@ -537,6 +598,7 @@ const TicketsPage = ({ navigate, params }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [isCreateModalOpen, setCreateModalOpen] = useState(params?.showCreateModal || false);
+    const { user } = useAuth(); // Get user from context
 
     const fetchTickets = useCallback(() => {
         setIsLoading(true);
@@ -554,41 +616,44 @@ const TicketsPage = ({ navigate, params }) => {
         <div>
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-3xl font-bold text-gray-800">My Tickets</h2>
-                <button onClick={() => setCreateModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow hover:bg-indigo-700 transition">
-                    <PlusCircle size={20} />
-                    Create Ticket
-                </button>
+                {/* --- MODIFICATION: Only show 'Create Ticket' to users with the 'user' role --- */}
+                {user.role === 'user' && (
+                    <button onClick={() => setCreateModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow hover:bg-indigo-700 transition">
+                        <PlusCircle size={20} />
+                        Create Ticket
+                    </button>
+                )}
             </div>
             <Card>
                 {isLoading ? <div className="p-6 text-center">Loading tickets...</div> :
                  error ? <div className="p-6 text-center text-red-500">{error}</div> :
                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {tickets.map(ticket => (
-                                <tr key={ticket.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate('ticketDetail', { id: ticket.id })}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{ticket.title}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap capitalize">{getStatusChip(ticket.status)}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap capitalize">{getPriorityChip(ticket.priority)}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(ticket.created_at).toLocaleDateString()}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <span className="text-indigo-600 hover:text-indigo-900 flex items-center justify-end">
-                                            View <ChevronRight size={16} className="ml-1" />
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                     <table className="min-w-full divide-y divide-gray-200">
+                         <thead className="bg-gray-50">
+                             <tr>
+                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                             </tr>
+                         </thead>
+                         <tbody className="bg-white divide-y divide-gray-200">
+                             {tickets.map(ticket => (
+                                 <tr key={ticket.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate('ticketDetail', { id: ticket.id })}>
+                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{ticket.title}</td>
+                                     <td className="px-6 py-4 whitespace-nowrap">{getStatusChip(ticket.status)}</td>
+                                     <td className="px-6 py-4 whitespace-nowrap">{getPriorityChip(ticket.priority)}</td>
+                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(ticket.created_at).toLocaleDateString()}</td>
+                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                         <span className="text-indigo-600 hover:text-indigo-900 flex items-center justify-end">
+                                             View <ChevronRight size={16} className="ml-1" />
+                                         </span>
+                                     </td>
+                                 </tr>
+                             ))}
+                         </tbody>
+                     </table>
                  </div>
                 }
             </Card>
@@ -602,6 +667,7 @@ const CreateTicketModal = ({ isOpen, onClose, onTicketCreated }) => {
     const [description, setDescription] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const { addNotification } = useNotification();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -609,6 +675,7 @@ const CreateTicketModal = ({ isOpen, onClose, onTicketCreated }) => {
         setIsLoading(true);
         try {
             await api.createTicket(title, description);
+            addNotification('Ticket created successfully!', 'success');
             onTicketCreated();
             setTitle('');
             setDescription('');
@@ -647,6 +714,7 @@ const TicketDetailPage = ({ ticketId, navigate }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const { user } = useAuth();
+    const { addNotification } = useNotification();
 
     const fetchTicket = useCallback(() => {
         setIsLoading(true);
@@ -663,9 +731,10 @@ const TicketDetailPage = ({ ticketId, navigate }) => {
     const handleStatusChange = async (newStatus) => {
         try {
             await api.updateTicketStatus(ticketId, newStatus);
+            addNotification('Ticket status updated successfully!', 'success');
             fetchTicket(); // Refresh ticket data
         } catch (err) {
-            alert(`Failed to update status: ${err.message}`);
+            addNotification(`Failed to update status: ${err.message}`, 'error');
         }
     };
 
@@ -748,6 +817,8 @@ const AdminPage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [editingUser, setEditingUser] = useState(null);
+    const [isConfirmModalOpen, setConfirmModalOpen] = useState(false);
+    const { addNotification } = useNotification();
 
     const fetchUsers = useCallback(() => {
         setIsLoading(true);
@@ -764,89 +835,96 @@ const AdminPage = () => {
     const handleUpdateUser = async (userId, role, skills) => {
         try {
             await api.updateUser(userId, role, skills.split(',').map(s => s.trim()).filter(Boolean));
+            addNotification('User updated successfully!', 'success');
             setEditingUser(null);
             fetchUsers();
         } catch (err) {
-            alert(`Failed to update user: ${err.message}`);
+            addNotification(`Failed to update user: ${err.message}`, 'error');
+        }
+    };
+
+    const handleRerunAI = async () => {
+        try {
+            await api.rerunAiAnalysis();
+            addNotification("AI re-analysis triggered for all tickets.", 'success');
+        } catch (err) {
+            addNotification(`Failed to trigger AI analysis: ${err.message}`, 'error');
+        } finally {
+            setConfirmModalOpen(false);
         }
     };
 
     return (
         <div>
-  <h2 className="text-3xl font-bold text-gray-800 mb-6">Admin Panel</h2>
-  <Card>
-    <div className="p-6 border-b">
-      <h3 className="text-lg font-semibold text-gray-900">User Management</h3>
-
-      {/* 🔁 Re-run AI Button Injected Here */}
-      <div className="mt-4">
-        <button
-          onClick={async () => {
-            const confirm = window.confirm("Re-run AI analysis for all tickets?");
-            if (!confirm) return;
-            try {
-              await api.rerunAiAnalysis();
-              alert("✅ AI re-analysis triggered. Moderators will be notified.");
-            } catch (err) {
-              alert(`❌ Failed to trigger AI analysis: ${err.message}`);
-            }
-          }}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-semibold"
-        >
-          🔁 Re-run AI Analysis
-        </button>
-      </div>
-    </div>
-
-    {isLoading ? (
-      <div className="p-6 text-center">Loading users...</div>
-    ) : error ? (
-      <div className="p-6 text-center text-red-500">{error}</div>
-    ) : (
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Skills</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {users.map((user) =>
-              editingUser?.id === user.id ? (
-                <EditUserRow
-                  key={user.id}
-                  user={editingUser}
-                  setEditingUser={setEditingUser}
-                  onSave={handleUpdateUser}
-                />
-              ) : (
-                <tr key={user.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.full_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{getRoleChip(user.role)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.skills.join(', ')}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => setEditingUser(user)}
-                      className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1"
-                    >
-                      <Edit size={14} /> Edit
-                    </button>
-                  </td>
-                </tr>
-              )
-            )}
-          </tbody>
-        </table>
-      </div>
-    )}
-  </Card>
-</div>
-
+            <h2 className="text-3xl font-bold text-gray-800 mb-6">Admin Panel</h2>
+            <Card>
+                <div className="p-6 border-b">
+                    <h3 className="text-lg font-semibold text-gray-900">User Management</h3>
+                    <div className="mt-4">
+                        <button
+                            onClick={() => setConfirmModalOpen(true)}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-semibold"
+                        >
+                            🔁 Re-run AI Analysis
+                        </button>
+                    </div>
+                </div>
+                {isLoading ? (
+                    <div className="p-6 text-center">Loading users...</div>
+                ) : error ? (
+                    <div className="p-6 text-center text-red-500">{error}</div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Skills</th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {users.map((user) =>
+                                    editingUser?.id === user.id ? (
+                                        <EditUserRow
+                                            key={user.id}
+                                            user={editingUser}
+                                            setEditingUser={setEditingUser}
+                                            onSave={handleUpdateUser}
+                                        />
+                                    ) : (
+                                        <tr key={user.id}>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.full_name}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap">{getRoleChip(user.role)}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.skills.join(', ')}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <button
+                                                    onClick={() => setEditingUser(user)}
+                                                    className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1"
+                                                >
+                                                    <Edit size={14} /> Edit
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    )
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </Card>
+            <ConfirmationModal
+                isOpen={isConfirmModalOpen}
+                onClose={() => setConfirmModalOpen(false)}
+                onConfirm={handleRerunAI}
+                title="Confirm AI Analysis"
+            >
+                Are you sure you want to re-run the AI analysis for all tickets? This action cannot be undone.
+            </ConfirmationModal>
+        </div>
     );
 };
 
