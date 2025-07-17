@@ -1,159 +1,271 @@
-# 🛠️ AI Ticketing System - Backend (FastAPI)
+🛠️ AI Ticketing System - Full Stack Guide
 
-This is the backend service for the AI Ticketing System. It handles user authentication, ticket creation, AI-powered triaging, moderator assignments, email notifications, and admin-level operations.
+  
 
----
+A comprehensive, step-by-step guide to clone, setup, and run the AI Ticketing System, covering both backend (FastAPI) and frontend (React + Vite + JavaScript).
 
-## 🚀 Tech Stack
+🎯 Table of Contents
 
-* **Framework**: FastAPI
-* **Database**: MongoDB (Atlas via `motor`)
-* **AI**: Google Gemini API (`google.generativeai`)
-* **Email**: Mailtrap SMTP (via `smtplib`, `jinja2`)
-* **Authentication**: JWT (bearer tokens)
+Overview
 
----
+Tech Stack
 
-## 📁 Project Structure
+Prerequisites
 
-```
+Quickstart Setup
+
+Detailed Setup
+
+Backend
+
+Frontend
+
+Environment Configuration
+
+Project Structure
+
+API Endpoints
+
+Usage Workflow
+
+Troubleshooting
+
+Deployment
+
+Contributing
+
+License
+
+📖 Overview
+
+The AI Ticketing System is a full-stack application designed to streamline support workflows using AI:
+
+AI Triage: Automatically classify and prioritize support tickets using Google Gemini.
+
+Role Management: Users, Moderators, and Admins with distinct permissions.
+
+Email Notifications: Automatic email alerts to assigned moderators.
+
+Admin Tools: Re-run AI analysis on fallback tickets.
+
+This guide helps developers get up and running quickly, whether setting up locally or deploying to production.
+
+🚀 Tech Stack
+
+Layer
+
+Technology
+
+Backend
+
+FastAPI, Motor (async MongoDB), Pydantic
+
+AI
+
+Google Gemini API (google.generativeai)
+
+Email
+
+Mailtrap SMTP, smtplib, jinja2
+
+Auth
+
+JWT (PyJWT)
+
+Frontend
+
+React + Vite + JavaScript, Tailwind CSS, Lucide Icons
+
+CI/CD
+
+GitHub Actions
+
+🔧 Prerequisites
+
+Node.js v16+ and npm v8+
+
+Python 3.9+
+
+MongoDB Atlas account or local MongoDB
+
+Google Cloud project with Vertex AI enabled
+
+Gemini API key (billing enabled)
+
+Mailtrap or SMTP credentials
+
+⚡ Quickstart Setup
+
+# 1. Clone repository
+git clone https://github.com/dubeyrudra-1808/AI-Ticketing-System.git
+cd AI-Ticketing-System
+
+# 2. Setup backend
+bash setup.sh    # Creates venv, installs Python deps & frontend deps
+
+# 3. Create .env file
+cp .env.example .env
+# Edit .env with your credentials
+
+# 4. Start servers
+# Terminal 1: Backend
+env/bin/activate && uvicorn app.main:app --reload
+# Terminal 2: Frontend
+cd Frontend/frontend && npm run dev
+
+Visit:
+
+API: http://localhost:8000
+
+Docs: http://localhost:8000/docs
+
+Frontend: http://localhost:5173
+
+📝 Detailed Setup
+
+Backend
+
+Activate virtual environment
+
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+Install dependencies
+
+pip install -r requirements.txt
+
+Run server
+
+uvicorn app.main:app --reload --port 8000
+
+Frontend
+
+Navigate to frontend directory
+
+cd Frontend/frontend
+
+Install npm packages
+
+npm install
+
+Launch dev server
+
+npm run dev
+
+🔐 Environment Configuration
+
+Copy .env.example to .env and fill values:
+
+MONGODB_URL=<your_mongo_uri>
+SECRET_KEY=<your_jwt_secret>
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+GEMINI_API_KEY=<your_gemini_key>
+SMTP_HOST=sandbox.smtp.mailtrap.io
+SMTP_PORT=2525
+SMTP_USER=<mailtrap_user>
+SMTP_PASSWORD=<mailtrap_pass>
+FROM_EMAIL=noreply@ticketsystem.com
+VITE_API_URL=http://localhost:8000
+APP_NAME="AI Ticket System"
+DEBUG=True
+
+Note: .env is in .gitignore to prevent committing secrets.
+
+📁 Project Structure
+
 AI-Ticketing-System/
 ├── .gitignore
 ├── README.md
 ├── requirements.txt
+├── setup.sh
 ├── app/
-│   ├── __init__.py
 │   ├── config.py
+│   ├── db.py
 │   ├── main.py
-│
+│   ├── ai_rerun_service.py
 │   ├── models/
-│   │   ├── __init__.py
-│   │   ├── database.py         # Database config or session maker
-│   │   ├── ticket.py           # Ticket model/schema
-│   │   └── user.py             # User model/schema
-│
 │   ├── routes/
-│   │   ├── __init__.py
-│   │   ├── admin.py            # Admin-specific endpoints
-│   │   ├── auth.py             # Authentication routes (OTP login)
-│   │   └── tickets.py          # Ticket-related endpoints (CRUD, assign, filter)
-│
 │   ├── services/
-│   │   ├── __init__.py
-│   │   ├── ai_service.py       # Logic to query Gemini API for triaging
-│   │   ├── auth_service.py     # Handles OTP logic and user verification
-│   │   ├── email_service.py    # Sends styled HTML emails to moderators
-│   │   └── ticket_service.py   # Business logic for ticket creation/assignment
-│
 │   └── utils/
-│       ├── __init__.py
-│       ├── background_tasks.py # Async background runners (email, re-analysis)
-│       └── security.py         # Password hashing, JWT handling
-```
+└── Frontend/
+    └── frontend/
+        ├── public/
+        ├── src/
+        ├── package.json
+        └── vite.config.ts
 
----
+🔗 API Endpoints
 
-## 🧪 Features
+Auth
 
-* ✉️ OTP login via registered email
-* 🧠 AI triaging via Gemini (required skills, priority, type)
-* 🎯 Single ticket assignment to moderators
-* 📬 Email notification on assignment
-* 🔁 Admin-triggered AI re-analysis and auto-notify
-* 🧑 Role-based access (admin, moderator, user)
+POST /auth/request-otp – Request login OTP
 
----
+POST /auth/verify-otp – Verify OTP and get JWT
 
-## 🔐 .env Example
+Tickets
 
-```env
-# MongoDB
-MONGODB_URL=mongodb+srv://...your_connection...
+POST /tickets/create – Create a new ticket
 
-# JWT
-SECRET_KEY=your_secret_key
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+GET /tickets – List all tickets (admin)
 
-# AI (Google Gemini)
-GEMINI_API_KEY=your_gemini_key
+GET /moderator/tickets – List assigned tickets (moderator)
 
-# Email (Mailtrap)
-SMTP_HOST=sandbox.smtp.mailtrap.io
-SMTP_PORT=2525
-SMTP_USER=your_user
-SMTP_PASSWORD=your_pass
-FROM_EMAIL=noreply@ticketsystem.com
+Admin
 
-# App Config
-APP_NAME=AI Ticket System
-DEBUG=True
-```
+GET /admin/users – List users
 
----
+PATCH /admin/users/{id} – Update user role/skills
 
-## 🛠️ Key Endpoints
+POST /admin/rerun-ai – Re-run AI on fallback tickets
 
-### 🔐 Auth
+🚀 Usage Workflow
 
-* `POST /auth/request-otp`
-* `POST /auth/verify-otp`
+Login via OTP endpoints.
 
-### 🎫 Tickets
+User creates a ticket.
 
-* `GET /tickets` (admin)
-* `GET /moderator/tickets` (moderator)
-* `POST /tickets/create`
+AI triages ticket automatically.
 
-### 🔁 Admin
+Admin assigns to a moderator.
 
-* `GET /admin/users`
-* `PATCH /admin/users/{user_id}`
-* `POST /admin/rerun-ai` (Re-analyze fallback tickets only)
+Moderator receives email and sees assigned tickets.
 
----
+Admin re-runs AI when needed.
 
-## 📦 Scripts
+🛠️ Troubleshooting
 
-### ▶️ Manual AI Re-analysis:
+Gemini timeouts: Increase timeout in ai_service to 20s.
 
-```bash
-python app/ai_rerun_service.py
-```
+No tickets: Ensure assigned_to is stored as ObjectId.
 
-Triggers AI re-analysis of unresolved tickets with fallback analysis.
+Email failures: Verify SMTP credentials and network.
 
----
+CORS errors: Configure FastAPI CORS middleware for frontend origin.
 
-## 🧠 AI Prompt Logic (Gemini)
+🚚 Deployment
 
-Prompts include title + description, and expects structured JSON:
+Dockerize: Create Dockerfile for backend and frontend.
 
-```json
-{
-  "required_skills": ["list", "of", "skills"],
-  "priority": "low|medium|high|urgent",
-  "ticket_type": "bug|feature|support|technical|other",
-  "helpful_notes": "short advice"
-}
-```
+CI/CD: Use GitHub Actions to build & deploy on push.
 
-Fallback is used if Gemini fails, times out, or response is invalid.
+Hosting Backends: Heroku, AWS ECS, DigitalOcean Apps.
 
----
+Hosting Frontend: Vercel or Netlify. Set VITE_API_URL in deployment env.
 
-## ✅ Status
+🤝 Contributing
 
-* [x] In progress
+Fork the repo
 
----
+Create feature branch
 
-## 🧑‍💻 Author
+Commit changes
 
-Rudra Dubey — [GitHub](https://github.com/dubeyrudra-1808)
+Open Pull Request
 
----
+📄 License
 
-## 📌 Note
+MIT License. See LICENSE for details.
 
-Make sure to **not commit your `.env`** file. It's excluded via `.gitignore`.
+© 2025 Rudra Dubey
+
