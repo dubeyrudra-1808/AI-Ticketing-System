@@ -1,19 +1,39 @@
+# Web framework
 fastapi==0.104.1
 uvicorn==0.24.0
+
+# MongoDB
 motor==3.3.2
 pymongo==4.6.0
+
+# Security & Auth
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
+
+# Data models & settings (Pydantic v1)
 pydantic==1.10.13
-pydantic-settings==0.4.0
+pydantic-settings==1.0.1
+
+# Environment vars
 python-dotenv==1.0.0
+
+# AI integration
 google-generativeai==0.3.2
+
+# Task queue
 celery==5.3.4
 redis==5.0.1
+
+# Email service
 emails==0.6.0
 jinja2==3.1.2
-pytest==7.4.3
-pytest-asyncio==0.21.1
+email-validator==1.3.1
+
+# HTTP client
 httpx==0.25.2
 dnspython==2.4.2
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
