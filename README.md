@@ -1,16 +1,14 @@
-
 # 🛠️ AI Ticketing System - Full Stack Guide
 
-A comprehensive, step-by-step guide to **clone**, **setup**, and **run** the AI Ticketing System, covering both **backend** (FastAPI) and **frontend** (React + Vite + JavaScript).
+A comprehensive, step-by-step guide to **clone**, **setup**, and **run** the AI Ticketing System, covering both **backend** (FastAPI + Docker) and **frontend** (React + Vite + JavaScript).
 
 ## 🎯 Table of Contents
-
 1. [Overview](#overview)
 2. [Tech Stack](#tech-stack)
 3. [Prerequisites](#prerequisites)
 4. [Quickstart Setup](#quickstart-setup)
 5. [Detailed Setup](#detailed-setup)
-   - [Backend](#backend)
+   - [Backend (Docker)](#backend-docker)
    - [Frontend](#frontend)
 6. [Environment Configuration](#environment-configuration)
 7. [Project Structure](#project-structure)
@@ -22,76 +20,63 @@ A comprehensive, step-by-step guide to **clone**, **setup**, and **run** the AI 
 13. [License](#license)
 
 ## 📖 Overview
-
 The **AI Ticketing System** is a full-stack application designed to streamline support workflows using AI:
-
 - **AI Triage**: Automatically classify and prioritize support tickets using Google Gemini.
 - **Role Management**: Users, Moderators, and Admins with distinct permissions.
 - **Email Notifications**: Automatic email alerts to assigned moderators.
 - **Admin Tools**: Re-run AI analysis on fallback tickets.
 
-This guide helps developers get up and running quickly, whether setting up locally or deploying to production.
-
 ## 🚀 Tech Stack
-
 | Layer        | Technology                                            |
 | ------------ | ----------------------------------------------------- |
-| **Backend**  | FastAPI, Motor (async MongoDB), Pydantic              |
-| **AI**       | Google Gemini API (`google.generativeai`)             |
+| **Backend**  | FastAPI, Docker, Motor (async MongoDB), Pydantic      |
+| **AI**       | Google Gemini API (`google-generativeai`)             |
 | **Email**    | Mailtrap SMTP, `smtplib`, `jinja2`                    |
 | **Auth**     | JWT (PyJWT)                                           |
 | **Frontend** | React + Vite + JavaScript, Tailwind CSS, Lucide Icons |
-| **CI/CD**    | GitHub Actions                                        |
+| **CI/CD**    | GitHub Actions, Render (Docker), Vercel               |
 
 ## 🔧 Prerequisites
-
+- **Docker** installed locally
 - **Node.js** v16+ and **npm** v8+
-- **Python** 3.9+
 - **MongoDB Atlas** account or local MongoDB
 - **Google Cloud** project with **Vertex AI** enabled
 - **Gemini API key** (billing enabled)
 - **Mailtrap** or SMTP credentials
 
 ## ⚡ Quickstart Setup
-
 ```bash
 # 1. Clone repository
 git clone https://github.com/dubeyrudra-1808/AI-Ticketing-System.git
 cd AI-Ticketing-System
 
-# 2. Setup backend
-bash setup.sh    # Creates venv, installs Python deps & frontend deps
+# 2. Build and run backend Docker container
+docker build -t ai-ticketing-backend .
+docker run -d --env-file .env -p 8000:8000 ai-ticketing-backend
 
-# 3. Create .env file
-cp .env.example .env
-# Edit .env with your credentials
-
-# 4. Start servers
-# Terminal 1: Backend
-env/bin/activate && uvicorn app.main:app --reload
-# Terminal 2: Frontend
-cd Frontend/frontend && npm run dev
+# 3. Install and start frontend
+cd Frontend/frontend
+npm install
+npm run dev
 ```
-
 Visit:
-
-- API: `http://localhost:8000`
-- Docs: `http://localhost:8000/docs`
+- Backend API: `http://localhost:8000`
+- Swagger Docs: `http://localhost:8000/docs`
 - Frontend: `http://localhost:5173`
 
 ## 📝 Detailed Setup
 
-### Backend
-
+### Backend (Docker)
 ```bash
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+# Build image
+docker build -t ai-ticketing-backend .
+
+# Run container with environment variables
+docker run -d --env-file .env -p 8000:8000 ai-ticketing-backend
 ```
+- The Docker container serves FastAPI at port 8000.
 
 ### Frontend
-
 ```bash
 cd Frontend/frontend
 npm install
@@ -99,7 +84,7 @@ npm run dev
 ```
 
 ## 🔐 Environment Configuration
-
+Create a `.env` file at the project root:
 ```env
 MONGODB_URL=<your_mongo_uri>
 SECRET_KEY=<your_jwt_secret>
@@ -111,21 +96,20 @@ SMTP_PORT=2525
 SMTP_USER=<mailtrap_user>
 SMTP_PASSWORD=<mailtrap_pass>
 FROM_EMAIL=noreply@ticketsystem.com
-VITE_API_URL=http://localhost:8000
+REDIS_URL=<your_redis_url>
 APP_NAME="AI Ticket System"
 DEBUG=True
+VITE_API_BASE_URL=http://localhost:8000
 ```
 
-> **Note**: `.env` is in `.gitignore` to prevent committing secrets.
-
 ## 📁 Project Structure
-
 ```
 AI-Ticketing-System/
 ├── .gitignore
+├── Dockerfile
 ├── README.md
 ├── requirements.txt
-├── setup.sh
+├── .env.example
 ├── app/
 │   ├── config.py
 │   ├── db.py
@@ -144,55 +128,39 @@ AI-Ticketing-System/
 ```
 
 ## 🔗 API Endpoints
-
 ### Auth
-
 - `POST /auth/request-otp`
 - `POST /auth/verify-otp`
-
 ### Tickets
-
-- `POST /tickets/create`
-- `GET /tickets`
-- `GET /moderator/tickets`
-
+- `POST /tickets`
+- `GET  /tickets`
+- `GET  /moderator/tickets`
 ### Admin
-
-- `GET /admin/users`
-- `PATCH /admin/users/{id}`
-- `POST /admin/rerun-ai`
+- `GET    /admin/users`
+- `PATCH  /admin/users/{id}`
+- `POST   /admin/rerun-ai`
 
 ## 🚀 Usage Workflow
-
-1. **Login** via OTP endpoints.
-2. **User** creates a ticket.
-3. **AI triages** ticket automatically.
-4. **Admin** assigns to a moderator.
-5. **Moderator** receives email and sees assigned tickets.
-6. **Admin** re-runs AI when needed.
+1. Request OTP and verify login.
+2. Create tickets as **user**.
+3. AI triages and assigns tickets.
+4. Moderators receive email and process tickets.
+5. Admins can re-run AI analysis as needed.
 
 ## 🛠️ Troubleshooting
-
-- **Gemini timeouts**: Increase `timeout` in `ai_service`.
-- **Email failures**: Verify SMTP credentials and network.
-- **CORS errors**: Configure FastAPI CORS middleware.
+- **Timeouts**: Increase `timeout` in AI calls.
+- **Email issues**: Check SMTP credentials and network.
+- **CORS errors**: Update allowed origins in `app/main.py`.
 
 ## 🚚 Deployment
-
-- **Docker** backend and frontend separately.
-- **CI/CD** with GitHub Actions.
-- **Host** backend (Heroku, ECS, etc.), frontend (Vercel, Netlify).
-- **Set** production env vars for secure deployment.
+- **Backend**: Docker on Render.
+- **Frontend**: Vercel or Netlify.
+- Set production env vars accordingly.
 
 ## 🤝 Contributing
-
-1. Fork the repo
-2. Create feature branch
-3. Commit changes
-4. Open Pull Request
+1. Fork the repo.
+2. Create a feature branch.
+3. Commit and open a PR.
 
 ## 📄 License
-
-MIT License. See LICENSE file for details.
-
-© 2025 Rudra Dubey
+MIT License © 2025 Rudra Dubey
