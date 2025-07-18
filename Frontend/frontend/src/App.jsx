@@ -3,7 +3,7 @@ import { Shield, LayoutDashboard, Ticket, LogOut, User, Lock, Mail, ChevronRight
 
 // --- Configuration ---
 // In a real app, this would come from an environment variable
-const API_BASE_URL = 'http://localhost:8000'; 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // --- API Service ---
 // A helper class to manage API requests, including adding the auth token.
