@@ -46,7 +46,7 @@ Respond like this:
             loop = asyncio.get_event_loop()
             response = await asyncio.wait_for(
                 loop.run_in_executor(None, lambda: self.model.generate_content(prompt)),
-                timeout=20
+                timeout=60
             )
 
             # Step 1: Extract clean text
