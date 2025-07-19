@@ -40,19 +40,19 @@ A modern, AI-powered support ticketing platform that automates triage, assignmen
 </p>
 
 ## 🎯 Table of Contents
-1. [Overview](#overview)
-2. [Tech Stack](#tech-stack)
-3. [Prerequisites](#prerequisites)
-4. [Quickstart](#quickstart)
-5. [Detailed Setup](#detailed-setup)
-6. [Environment Configuration](#environment-configuration)
-7. [Project Structure](#project-structure)
-8. [API Reference](#api-reference)
-9. [Workflow](#workflow)
-10. [Troubleshooting](#troubleshooting)
-11. [Deployment](#deployment)
-12. [Contributing](#contributing)
-13. [License](#license)
+1. [Overview](#-overview)
+2. [Tech Stack](#-tech-stack)
+3. [Prerequisites](#-prerequisites)
+4. [Quickstart](#-quickstart)
+5. [Detailed Setup](#-detailed-setup)
+6. [Environment Configuration](#-environment-configuration)
+7. [Project Structure](#-project-structure)
+8. [API Reference](#-api-reference)
+9. [Workflow](#-workflow)
+10. [Troubleshooting](#-troubleshooting)
+11. [Deployment](#-deployment)
+12. [Contributing](#-contributing)
+13. [License](#-license)
 
 ## 📖 Overview
 AI Ticketing System automates support requests using AI-driven insights and streamlines communication between users, moderators, and admins.
