@@ -4,6 +4,7 @@ from jose import JWTError, jwt
 import hashlib
 import base64
 import bcrypt
+from app.config import settings
 
 # pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
