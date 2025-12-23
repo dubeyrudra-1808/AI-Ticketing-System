@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class AIService:
     def __init__(self):
-        self.model_name = getattr(settings, "gemini_model_name", "gemini-1.5-flash")
+        self.model_name = getattr(settings, "gemini_model_name", "gemini-2.0-flash-lite-preview-02-05")
         if settings.gemini_api_key:
             genai.configure(api_key=settings.gemini_api_key)
             self.model = genai.GenerativeModel(self.model_name)
